@@ -391,6 +391,7 @@ const KV = {
 let currentUser = null;
 let currentQuiz = null;
 let quizAnswers = {};
+let quizCorrectAnswers = null;
 let currentTournament = null;
 let myCurrentMatchup = null;
 let pollInterval = null;
@@ -506,11 +507,15 @@ async function startQuiz() {
   if (!q) return showError("No quiz posted today. Tell your brother to get on it.");
   currentQuiz = q;
   quizAnswers = {};
+  quizCorrectAnswers = null;
 
   // Check if already played
   const played = await KV.get('played:' + todayKey() + ':' + currentUser.username.toLowerCase());
   if (played) {
     quizAnswers = played.answers || {};
+    // Only fetch correct answers for review (after they've already played)
+    const answerData = await KV.get('quiz-answers:' + todayKey());
+    quizCorrectAnswers = answerData ? answerData.answers : null;
     renderQuizResults(played.score);
   } else {
     renderQuizForm();
@@ -571,8 +576,14 @@ function selectAnswer(qi, oi) {
 
 async function handleSubmitQuiz() {
   if (!currentQuiz) return;
+
+  // Fetch correct answers only at submission time
+  const answerData = await KV.get('quiz-answers:' + todayKey());
+  if (!answerData) return showError('Could not load answers. Try again.');
+  quizCorrectAnswers = answerData.answers;
+
   let correct = 0;
-  currentQuiz.questions.forEach((q, i) => { if (quizAnswers[i] === q.correct) correct++; });
+  currentQuiz.questions.forEach((q, i) => { if (quizAnswers[i] === quizCorrectAnswers[i]) correct++; });
 
   const result = {
     username: currentUser.username, score: correct, total: currentQuiz.questions.length,
@@ -596,7 +607,8 @@ function renderQuizResults(score) {
 
   let reviewHtml = '';
   currentQuiz.questions.forEach((q, qi) => {
-    const isCorrect = quizAnswers[qi] === q.correct;
+    const correctIdx = quizCorrectAnswers ? quizCorrectAnswers[qi] : null;
+    const isCorrect = correctIdx !== null && quizAnswers[qi] === correctIdx;
     reviewHtml += `
       <div style="margin-bottom:18px">
         <div style="display:flex;gap:8px;align-items:flex-start">
@@ -605,7 +617,7 @@ function renderQuizResults(score) {
             <p class="txt" style="font-size:14px">${esc(q.question)}</p>
             <p style="font-size:13px" class="${isCorrect ? 'txt-correct' : 'txt-wrong'}">
               ${isCorrect ? '✓' : '✗'} ${esc(q.options[quizAnswers[qi]] || 'Skipped')}
-              ${!isCorrect ? `<span class="txt-correct" style="margin-left:8px">→ ${esc(q.options[q.correct])}</span>` : ''}
+              ${!isCorrect && correctIdx !== null ? `<span class="txt-correct" style="margin-left:8px">→ ${esc(q.options[correctIdx])}</span>` : ''}
             </p>
           </div>
         </div>
@@ -1028,7 +1040,11 @@ async function handleSaveQuiz() {
   const prize = document.getElementById('admin-prize').value.trim();
   if (!prize) return showError('Add a prize.');
 
-  await KV.set('quiz:' + todayKey(), { questions: adminQuestions, prize, createdAt: Date.now(), date: todayKey() });
+  // Store questions WITHOUT correct answers (so users can't peek)
+  const questionsOnly = adminQuestions.map(q => ({ question: q.question, options: q.options }));
+  const correctAnswers = adminQuestions.map(q => q.correct);
+  await KV.set('quiz:' + todayKey(), { questions: questionsOnly, prize, createdAt: Date.now(), date: todayKey() });
+  await KV.set('quiz-answers:' + todayKey(), { answers: correctAnswers });
   await KV.del('rps:' + todayKey());
   alert('Quiz saved.');
   showScreen('home');
