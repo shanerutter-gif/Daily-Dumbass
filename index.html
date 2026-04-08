@@ -509,9 +509,9 @@ async function startQuiz() {
   quizAnswers = {};
   quizCorrectAnswers = null;
 
-  // Check if already played
+  // Check if already played — but only if it matches the current quiz version
   const played = await KV.get('played:' + todayKey() + ':' + currentUser.username.toLowerCase());
-  if (played) {
+  if (played && played.quizVersion === currentQuiz.createdAt) {
     quizAnswers = played.answers || {};
     // Only fetch correct answers for review (after they've already played)
     const answerData = await KV.get('quiz-answers:' + todayKey());
@@ -587,7 +587,7 @@ async function handleSubmitQuiz() {
 
   const result = {
     username: currentUser.username, score: correct, total: currentQuiz.questions.length,
-    date: todayKey(), timestamp: Date.now(), answers: quizAnswers
+    date: todayKey(), timestamp: Date.now(), answers: quizAnswers, quizVersion: currentQuiz.createdAt
   };
   await KV.set('played:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
   await KV.set('lb:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
@@ -1043,10 +1043,19 @@ async function handleSaveQuiz() {
   // Store questions WITHOUT correct answers (so users can't peek)
   const questionsOnly = adminQuestions.map(q => ({ question: q.question, options: q.options }));
   const correctAnswers = adminQuestions.map(q => q.correct);
-  await KV.set('quiz:' + todayKey(), { questions: questionsOnly, prize, createdAt: Date.now(), date: todayKey() });
+  const quizVersion = Date.now();
+  await KV.set('quiz:' + todayKey(), { questions: questionsOnly, prize, createdAt: quizVersion, date: todayKey() });
   await KV.set('quiz-answers:' + todayKey(), { answers: correctAnswers });
+
+  // Clear all played and leaderboard records so everyone can retake the new quiz
+  // This prevents answer leaks from stale played records loading new answers
+  const oldPlayed = await KV.list('played:' + todayKey() + ':');
+  const oldLb = await KV.list('lb:' + todayKey() + ':');
+  for (const entry of oldPlayed) await KV.del(entry.key);
+  for (const entry of oldLb) await KV.del(entry.key);
+
   await KV.del('rps:' + todayKey());
-  alert('Quiz saved.');
+  alert('Quiz saved. All previous plays cleared — everyone can retake.');
   showScreen('home');
   // Reset admin state
   document.getElementById('admin-login-area').classList.remove('hidden');
