@@ -396,6 +396,7 @@ let currentTournament = null;
 let myCurrentMatchup = null;
 let pollInterval = null;
 let adminQuestions = [{ question: '', options: ['','','',''], correct: 0 }];
+let sessionAdminPw = null;
 
 const RPS_ICONS = { rock: '✊', paper: '✋', scissors: '✌️' };
 const RPS_BEATS = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
@@ -513,9 +514,8 @@ async function startQuiz() {
   const played = await KV.get('played:' + todayKey() + ':' + currentUser.username.toLowerCase());
   if (played && played.quizVersion === currentQuiz.createdAt) {
     quizAnswers = played.answers || {};
-    // Only fetch correct answers for review (after they've already played)
-    const answerData = await KV.get('quiz-answers:' + todayKey());
-    quizCorrectAnswers = answerData ? answerData.answers : null;
+    // Read correct answers from the played record (saved at submission time)
+    quizCorrectAnswers = played.correctAnswers || null;
     renderQuizResults(played.score);
   } else {
     renderQuizForm();
@@ -577,21 +577,20 @@ function selectAnswer(qi, oi) {
 async function handleSubmitQuiz() {
   if (!currentQuiz) return;
 
-  // Fetch correct answers only at submission time
-  const answerData = await KV.get('quiz-answers:' + todayKey());
-  if (!answerData) return showError('Could not load answers. Try again.');
-  quizCorrectAnswers = answerData.answers;
-
-  let correct = 0;
-  currentQuiz.questions.forEach((q, i) => { if (quizAnswers[i] === quizCorrectAnswers[i]) correct++; });
+  // Grade server-side — answers never sent to the client before submission
+  const answersArray = currentQuiz.questions.map((_, i) => quizAnswers[i] ?? -1);
+  const { data, error } = await sb.rpc('grade_quiz', { p_date: todayKey(), p_answers: answersArray });
+  if (error || !data || data.error) return showError('Could not grade quiz. Try again.');
+  quizCorrectAnswers = data.correct_answers;
 
   const result = {
-    username: currentUser.username, score: correct, total: currentQuiz.questions.length,
-    date: todayKey(), timestamp: Date.now(), answers: quizAnswers, quizVersion: currentQuiz.createdAt
+    username: currentUser.username, score: data.score, total: data.total,
+    date: todayKey(), timestamp: Date.now(), answers: quizAnswers,
+    quizVersion: currentQuiz.createdAt, correctAnswers: data.correct_answers
   };
   await KV.set('played:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
   await KV.set('lb:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
-  renderQuizResults(correct);
+  renderQuizResults(data.score);
 }
 
 function renderQuizResults(score) {
@@ -984,6 +983,7 @@ async function resolveRound(t, match, roundIndex) {
 function handleAdminLogin() {
   clearError();
   if (document.getElementById('admin-pw').value === ADMIN_PASSWORD) {
+    sessionAdminPw = document.getElementById('admin-pw').value;
     document.getElementById('admin-login-area').classList.add('hidden');
     document.getElementById('admin-panel').classList.remove('hidden');
     document.getElementById('admin-date').textContent = todayKey();
@@ -1045,7 +1045,10 @@ async function handleSaveQuiz() {
   const correctAnswers = adminQuestions.map(q => q.correct);
   const quizVersion = Date.now();
   await KV.set('quiz:' + todayKey(), { questions: questionsOnly, prize, createdAt: quizVersion, date: todayKey() });
-  await KV.set('quiz-answers:' + todayKey(), { answers: correctAnswers });
+  // Save answers server-side (RLS blocks direct writes to quiz-answers keys)
+  const adminPw = document.getElementById('admin-pw').value || sessionAdminPw;
+  const { error: saveErr } = await sb.rpc('save_quiz_answers', { p_date: todayKey(), p_answers: correctAnswers, p_password: adminPw });
+  if (saveErr) return showError('Failed to save answers: ' + saveErr.message);
 
   // Clear all played and leaderboard records so everyone can retake the new quiz
   // This prevents answer leaks from stale played records loading new answers
