@@ -1,0 +1,1065 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daily Dumbass</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Special+Elite&family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --paper: #f5f0e8;
+    --paper-dark: #e8e0d2;
+    --ink: #2c2c2c;
+    --ink-light: #5a5a5a;
+    --ink-faint: #8a8a7a;
+    --ink-ghost: #b5b0a5;
+    --border: #c8c0b4;
+    --border-light: #d8d2c6;
+    --highlight: #e2dace;
+    --correct: #2a5a2a;
+    --wrong: #6a2a2a;
+    --font: 'Special Elite', 'Courier New', monospace;
+    --mono: 'Courier Prime', 'Courier New', monospace;
+  }
+
+- { box-sizing: border-box; margin: 0; padding: 0; }
+  ::selection { background: var(–highlight); color: var(–ink); }
+
+body {
+font-family: var(–font);
+color: var(–ink);
+background:
+repeating-linear-gradient(0deg, transparent, transparent 28px, rgba(0,0,0,0.018) 28px, rgba(0,0,0,0.018) 29px),
+radial-gradient(ellipse at 25% 0%, rgba(0,0,0,0.02) 0%, transparent 60%),
+radial-gradient(ellipse at 80% 100%, rgba(0,0,0,0.025) 0%, transparent 50%),
+linear-gradient(168deg, #f7f2ea 0%, #f0ebe0 40%, #ece5d8 100%);
+background-attachment: fixed;
+min-height: 100vh;
+-webkit-font-smoothing: antialiased;
+}
+
+input::placeholder { color: var(–ink-ghost); font-style: italic; font-family: var(–mono); }
+
+.status-bar {
+position: sticky; top: 0; z-index: 50;
+background: linear-gradient(180deg, #f0ebe0 80%, transparent);
+padding: 12px 20px 20px;
+display: flex; justify-content: space-between; align-items: center;
+font-family: var(–mono); font-size: 10px; color: var(–ink-faint);
+letter-spacing: 0.1em; text-transform: uppercase;
+}
+.status-bar .date { color: var(–ink-ghost); letter-spacing: 0.08em; text-transform: none; }
+
+.page { max-width: 500px; margin: 0 auto; padding: 0 24px 80px; min-height: calc(100vh - 60px); }
+
+h1 { font-family: var(–font); font-size: 34px; font-weight: 700; color: var(–ink); letter-spacing: -0.01em; line-height: 1.2; margin-bottom: 6px; text-align: center; }
+h2 { font-family: var(–font); font-size: 22px; font-weight: 700; color: var(–ink); text-align: center; margin-bottom: 8px; }
+
+.subtitle { font-size: 14px; color: var(–ink-light); font-style: italic; text-align: center; line-height: 1.5; }
+.sep { height: 1px; background: var(–border); margin: 20px 0; opacity: 0.6; }
+.label { font-family: var(–mono); font-size: 10px; color: var(–ink-faint); text-transform: uppercase; letter-spacing: 0.12em; margin-bottom: 4px; }
+.txt { font-size: 15px; line-height: 1.6; }
+.txt-sm { font-size: 13px; }
+.txt-xs { font-size: 11px; }
+.txt-faint { color: var(–ink-faint); }
+.txt-ghost { color: var(–ink-ghost); }
+.txt-light { color: var(–ink-light); }
+.txt-correct { color: var(–correct); }
+.txt-wrong { color: var(–wrong); }
+.txt-center { text-align: center; }
+.txt-italic { font-style: italic; }
+.txt-bold { font-weight: 700; }
+.mono { font-family: var(–mono); }
+
+.btn {
+font-family: var(–font); font-size: 15px; padding: 10px 24px; border-radius: 2px;
+cursor: pointer; transition: opacity 0.15s; letter-spacing: 0.02em;
+background: transparent; border: 1.5px solid var(–ink); color: var(–ink);
+}
+.btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-primary { background: var(–ink); color: var(–paper); }
+.btn-ghost { border-color: var(–border-light); color: var(–ink-light); }
+.btn-sm { font-size: 11px; padding: 5px 12px; }
+
+.input {
+font-family: var(–font); font-size: 16px; color: var(–ink); background: transparent;
+border: none; border-bottom: 1px solid var(–border); padding: 10px 2px;
+width: 100%; outline: none; border-radius: 0;
+}
+
+.error-bar {
+font-size: 13px; color: var(–wrong); background: rgba(106,42,42,0.06);
+padding: 10px 14px; border-left: 3px solid var(–wrong); margin-bottom: 16px; line-height: 1.5;
+animation: slideUp 0.25s ease;
+}
+
+.screen { display: none; animation: slideUp 0.35s ease; }
+.screen.active { display: block; }
+
+.nav-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 6px; }
+
+.option-row {
+display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 2px;
+border: 1px solid var(–border-light); cursor: pointer; transition: all 0.12s;
+}
+.option-row.selected { border-color: var(–ink); background: rgba(44,44,44,0.05); }
+.option-radio {
+width: 16px; height: 16px; border-radius: 50%; border: 1.5px solid var(–border);
+flex-shrink: 0; transition: all 0.12s; position: relative;
+}
+.option-row.selected .option-radio { border-color: var(–ink); background: var(–ink); }
+.option-radio-dot { width: 6px; height: 6px; border-radius: 50%; background: var(–paper); position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: none; }
+.option-row.selected .option-radio-dot { display: block; }
+
+.match-card { border: 1.5px solid var(–border-light); border-radius: 2px; padding: 10px 12px; margin-bottom: 8px; }
+.match-card.mine { border-color: var(–ink); background: rgba(44,44,44,0.04); }
+
+.rps-btn {
+width: 80px; height: 80px; font-size: 36px; background: transparent;
+border: 2px solid var(–ink); border-radius: 4px; cursor: pointer;
+display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+transition: all 0.15s;
+}
+.rps-btn:hover { background: rgba(44,44,44,0.04); }
+
+.prize-box { text-align: center; padding: 14px 16px; margin-bottom: 24px; border: 1px solid var(–border); border-radius: 2px; }
+.champion-box { text-align: center; padding: 20px 16px; margin: 16px 0; border: 2px solid var(–ink); border-radius: 2px; }
+
+.q-block { margin-bottom: 28px; }
+.q-num { font-family: var(–mono); font-size: 11px; color: var(–ink-ghost); flex-shrink: 0; width: 20px; margin-top: 4px; }
+
+.admin-q-card { margin-bottom: 28px; padding: 16px; border: 1px solid var(–border-light); border-radius: 2px; }
+.admin-radio {
+width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(–border);
+cursor: pointer; flex-shrink: 0; transition: all 0.15s; position: relative;
+}
+.admin-radio.active { border-color: var(–correct); background: var(–correct); }
+.admin-radio-dot { width: 6px; height: 6px; border-radius: 50%; background: var(–paper); position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); display: none; }
+.admin-radio.active .admin-radio-dot { display: block; }
+
+.footer { margin-top: 48px; text-align: center; padding-bottom: 20px; }
+.footer-text { font-family: var(–mono); font-size: 9px; color: var(–ink-ghost); letter-spacing: 0.12em; text-transform: uppercase; }
+
+.flex-col { display: flex; flex-direction: column; }
+.flex-center { display: flex; justify-content: center; align-items: center; }
+.gap-6 { gap: 6px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.gap-20 { gap: 20px; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.mt-20 { margin-top: 20px; }
+.mt-24 { margin-top: 24px; }
+.mb-6 { margin-bottom: 6px; }
+.mb-8 { margin-bottom: 8px; }
+.mb-12 { margin-bottom: 12px; }
+.mb-16 { margin-bottom: 16px; }
+.mb-20 { margin-bottom: 20px; }
+.mb-24 { margin-bottom: 24px; }
+.w-200 { width: 200px; }
+.w-240 { width: 240px; }
+.mx-auto { margin-left: auto; margin-right: auto; }
+.max-w-300 { max-width: 300px; }
+.hidden { display: none !important; }
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes shake {
+0%, 100% { transform: translateY(0); }
+20% { transform: translateY(-12px) rotate(-5deg); }
+40% { transform: translateY(4px) rotate(3deg); }
+60% { transform: translateY(-8px) rotate(-3deg); }
+80% { transform: translateY(2px) rotate(2deg); }
+}
+@keyframes reveal { 0% { transform: scale(0.5); opacity: 0; } 50% { transform: scale(1.3); } 100% { transform: scale(1); opacity: 1; } }
+@keyframes crownBounce { 0%, 100% { transform: translateY(0) rotate(0deg); } 25% { transform: translateY(-6px) rotate(-5deg); } 75% { transform: translateY(-3px) rotate(5deg); } }
+</style>
+
+</head>
+<body>
+
+<div class="status-bar">
+  <span>Daily Dumbass</span>
+  <span class="date" id="today-date"></span>
+</div>
+
+<div class="page">
+  <div style="text-align:center; margin-bottom:8px;">
+    <h1>Daily Dumbass</h1>
+    <p class="subtitle">Trivia from your favorite idiot — once a day, every day.</p>
+  </div>
+  <div class="sep"></div>
+
+  <!-- Nav bar (shown when logged in) -->
+
+  <div class="nav-bar hidden" id="nav-bar">
+    <span class="txt-sm txt-light">Signed in as <strong id="nav-username"></strong></span>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-ghost btn-sm hidden" id="nav-back" onclick="showScreen('home')">← Back</button>
+      <button class="btn btn-ghost btn-sm" onclick="handleLogout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Error bar -->
+
+  <div class="error-bar hidden" id="error-bar"></div>
+
+  <!-- ═══ SCREEN: LOADING ═══ -->
+
+  <div class="screen active" id="screen-loading">
+    <p class="txt-center txt-ghost mono" style="margin-top:80px;letter-spacing:0.1em">LOADING ···</p>
+  </div>
+
+  <!-- ═══ SCREEN: HOME (logged out) ═══ -->
+
+  <div class="screen" id="screen-home-out">
+    <p class="txt txt-light txt-center" style="max-width:380px;margin:0 auto 28px;line-height:1.7">
+      Every day, one person posts a series of dumbass questions. Everyone else tries to answer them. If there's a tie at the top, you battle it out in rock-paper-scissors. Winner gets a prize. It's not complicated.
+    </p>
+    <div class="flex-col gap-12 flex-center" style="align-items:center">
+      <button class="btn btn-primary w-200" onclick="showScreen('login')">Sign In</button>
+      <button class="btn w-200" onclick="showScreen('signup')">Create Account</button>
+    </div>
+    <div class="sep" style="margin-top:32px"></div>
+    <div class="txt-center"><button class="btn btn-ghost" style="font-size:11px" onclick="showScreen('admin')">Admin →</button></div>
+  </div>
+
+  <!-- ═══ SCREEN: HOME (logged in) ═══ -->
+
+  <div class="screen" id="screen-home-in">
+    <p class="txt txt-light txt-center" style="max-width:380px;margin:0 auto 28px;line-height:1.7">
+      Ready to prove you're not as dumb as the person writing these questions?
+    </p>
+    <div class="flex-col gap-12 flex-center" style="align-items:center">
+      <button class="btn btn-primary w-240" style="font-size:16px" onclick="startQuiz()">Take Today's Quiz</button>
+      <button class="btn w-240" onclick="enterTournament()">✊ ✋ ✌️  Tiebreaker</button>
+      <button class="btn w-240" onclick="showLeaderboard()">Leaderboard</button>
+    </div>
+    <div class="sep" style="margin-top:32px"></div>
+    <div class="txt-center"><button class="btn btn-ghost" style="font-size:11px" onclick="showScreen('admin')">Admin →</button></div>
+  </div>
+
+  <!-- ═══ SCREEN: LOGIN ═══ -->
+
+  <div class="screen" id="screen-login">
+    <div class="max-w-300 mx-auto">
+      <h2>Sign In</h2>
+      <div class="flex-col gap-20 mt-24">
+        <div><div class="label">Email</div><input class="input" id="login-email" type="email" placeholder="you@email.com"></div>
+        <div class="txt-center"><button class="btn btn-primary mt-8" onclick="handleLogin()">Sign In →</button></div>
+        <p class="txt-xs txt-faint txt-center txt-italic" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="showScreen('signup')">Don't have an account? Sign up</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: SIGNUP ═══ -->
+
+  <div class="screen" id="screen-signup">
+    <div class="max-w-300 mx-auto">
+      <h2>Create Account</h2>
+      <div class="flex-col gap-20 mt-24">
+        <div><div class="label">Name</div><input class="input" id="signup-name" placeholder="What should we call you"></div>
+        <div><div class="label">Email</div><input class="input" id="signup-email" type="email" placeholder="you@email.com"></div>
+        <div class="txt-center"><button class="btn btn-primary mt-8" onclick="handleSignup()">Create Account</button></div>
+        <p class="txt-xs txt-faint txt-center txt-italic" style="cursor:pointer;text-decoration:underline;text-underline-offset:3px" onclick="showScreen('login')">Already have an account? Sign in</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: QUIZ ═══ -->
+
+  <div class="screen" id="screen-quiz">
+    <div class="mb-16"><button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Back</button></div>
+    <div class="prize-box">
+      <div class="label mb-6">Today's Prize</div>
+      <div id="quiz-prize" style="font-size:18px;font-weight:600"></div>
+    </div>
+    <div id="quiz-questions"></div>
+    <div class="sep"></div>
+    <div class="txt-center" id="quiz-submit-area">
+      <button class="btn btn-primary" style="font-size:16px;padding:12px 40px" id="quiz-submit-btn" onclick="handleSubmitQuiz()" disabled>Submit Answers</button>
+      <p class="txt-xs txt-ghost txt-italic mt-12" id="quiz-submit-hint"></p>
+    </div>
+    <div id="quiz-results" class="hidden"></div>
+  </div>
+
+  <!-- ═══ SCREEN: LEADERBOARD ═══ -->
+
+  <div class="screen" id="screen-leaderboard">
+    <h2>Leaderboard</h2>
+    <div class="label txt-center mb-20" id="lb-date"></div>
+    <div id="lb-list"></div>
+    <div class="txt-center mt-24"><button class="btn btn-ghost" style="font-size:11px" onclick="showLeaderboard()">Refresh</button></div>
+  </div>
+
+  <!-- ═══ SCREEN: TOURNAMENT ═══ -->
+
+  <div class="screen" id="screen-tournament">
+    <div style="display:flex;justify-content:space-between;align-items:center" class="mb-16">
+      <button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Back</button>
+      <button class="btn btn-ghost btn-sm" onclick="refreshTournament()">Refresh ↻</button>
+    </div>
+    <h2>✊ ✋ ✌️ Tiebreaker</h2>
+    <div class="label txt-center mb-6">Best of 3 · Single Elimination</div>
+    <div id="tournament-champion" class="hidden"></div>
+    <div class="sep"></div>
+    <div id="tournament-bracket"></div>
+    <div class="sep"></div>
+    <div id="tournament-play-area"></div>
+  </div>
+
+  <!-- ═══ SCREEN: ADMIN ═══ -->
+
+  <div class="screen" id="screen-admin">
+    <div id="admin-login-area">
+      <div class="max-w-300 mx-auto txt-center">
+        <h2>Admin</h2>
+        <p class="txt-sm txt-faint txt-italic mb-24">This is where the brother logs in.</p>
+        <input class="input" id="admin-pw" type="password" placeholder="Admin password">
+        <div class="mt-20"><button class="btn btn-primary" onclick="handleAdminLogin()">Enter →</button></div>
+        <div class="mt-16"><button class="btn btn-ghost btn-sm" onclick="showScreen('home')">← Back</button></div>
+      </div>
+    </div>
+    <div id="admin-panel" class="hidden">
+      <h2>Write Today's Quiz</h2>
+      <div class="label txt-center mb-24" id="admin-date"></div>
+      <div class="mb-24">
+        <div class="label">Prize</div>
+        <input class="input" id="admin-prize" placeholder="$20 Venmo, bragging rights, a handshake...">
+      </div>
+      <div id="admin-questions"></div>
+      <div class="flex-center gap-12" style="flex-wrap:wrap">
+        <button class="btn" onclick="addAdminQuestion()">+ Add Question</button>
+        <button class="btn btn-primary" style="font-size:14px" onclick="handleSaveQuiz()">Save Quiz</button>
+      </div>
+      <div class="sep" style="margin-top:28px"></div>
+      <div class="txt-center">
+        <div class="label mb-8">Tournament Controls</div>
+        <button class="btn" style="font-size:13px" onclick="adminResetTournament()">↻ Reset & Start Tournament</button>
+        <p class="txt-xs txt-ghost txt-italic mt-8">Rebuilds bracket from current perfect scorers.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="sep"></div>
+    <p class="footer-text">Daily Dumbass · Est. 2026</p>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+// CONFIG — Replace these with your Supabase creds
+// ══════════════════════════════════════════════
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const ADMIN_PASSWORD = 'dumbass2026';
+
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ══════════════════════════════════════════════
+// KV Store abstraction over Supabase
+// ══════════════════════════════════════════════
+const KV = {
+  async get(key) {
+    const { data, error } = await sb.from('kv_store').select('value').eq('key', key).maybeSingle();
+    if (error || !data) return null;
+    return data.value;
+  },
+  async set(key, value) {
+    const { error } = await sb.from('kv_store').upsert({ key, value }, { onConflict: 'key' });
+    if (error) console.error('KV set error:', error);
+  },
+  async del(key) {
+    await sb.from('kv_store').delete().eq('key', key);
+  },
+  async list(prefix) {
+    const { data, error } = await sb.from('kv_store').select('key, value').like('key', prefix + '%');
+    if (error || !data) return [];
+    return data;
+  }
+};
+
+// ══════════════════════════════════════════════
+// App State
+// ══════════════════════════════════════════════
+let currentUser = null;
+let currentQuiz = null;
+let quizAnswers = {};
+let currentTournament = null;
+let myCurrentMatchup = null;
+let pollInterval = null;
+let adminQuestions = [{ question: '', options: ['','','',''], correct: 0 }];
+
+const RPS_ICONS = { rock: '✊', paper: '✋', scissors: '✌️' };
+const RPS_BEATS = { rock: 'scissors', scissors: 'paper', paper: 'rock' };
+
+function todayKey() { return new Date().toISOString().slice(0, 10); }
+
+// ══════════════════════════════════════════════
+// Screen Management
+// ══════════════════════════════════════════════
+function showScreen(name) {
+  clearError();
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+
+  const navBar = document.getElementById('nav-bar');
+  const navBack = document.getElementById('nav-back');
+
+  if (name === 'home') {
+    if (currentUser) {
+      document.getElementById('screen-home-in').classList.add('active');
+      navBar.classList.remove('hidden');
+      navBack.classList.add('hidden');
+    } else {
+      document.getElementById('screen-home-out').classList.add('active');
+      navBar.classList.add('hidden');
+    }
+  } else {
+    document.getElementById('screen-' + name).classList.add('active');
+    if (currentUser && !['quiz','tournament'].includes(name)) {
+      navBar.classList.remove('hidden');
+      navBack.classList.remove('hidden');
+    } else {
+      navBar.classList.add('hidden');
+    }
+  }
+}
+
+function showError(msg) {
+  const el = document.getElementById('error-bar');
+  el.textContent = msg;
+  el.classList.remove('hidden');
+}
+function clearError() { document.getElementById('error-bar').classList.add('hidden'); }
+
+// ══════════════════════════════════════════════
+// Auth
+// ══════════════════════════════════════════════
+async function init() {
+  document.getElementById('today-date').textContent = todayKey();
+  const session = localStorage.getItem('dd_session');
+  if (session) {
+    try {
+      currentUser = JSON.parse(session);
+      document.getElementById('nav-username').textContent = currentUser.username;
+    } catch { currentUser = null; }
+  }
+  showScreen('home');
+}
+
+async function handleSignup() {
+  clearError();
+  const name = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim().toLowerCase();
+  if (!name || !email) return showError('Please fill in both fields.');
+  if (name.length < 2) return showError('Name is too short.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('That doesn\'t look like a real email.');
+
+  const existing = await KV.get('user:' + email);
+  if (existing) return showError('That email is already signed up.');
+
+  const userData = { username: name, email, createdAt: Date.now() };
+  await KV.set('user:' + email, userData);
+  currentUser = userData;
+  localStorage.setItem('dd_session', JSON.stringify(userData));
+  document.getElementById('nav-username').textContent = name;
+  document.getElementById('signup-name').value = '';
+  document.getElementById('signup-email').value = '';
+  showScreen('home');
+}
+
+async function handleLogin() {
+  clearError();
+  const email = document.getElementById('login-email').value.trim().toLowerCase();
+  if (!email) return showError('Enter your email.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('That doesn\'t look like a real email.');
+
+  const userData = await KV.get('user:' + email);
+  if (!userData) return showError('No account found. Sign up first.');
+
+  currentUser = userData;
+  localStorage.setItem('dd_session', JSON.stringify(userData));
+  document.getElementById('nav-username').textContent = userData.username;
+  document.getElementById('login-email').value = '';
+  showScreen('home');
+}
+
+function handleLogout() {
+  currentUser = null;
+  localStorage.removeItem('dd_session');
+  showScreen('home');
+}
+
+// ══════════════════════════════════════════════
+// Quiz
+// ══════════════════════════════════════════════
+async function startQuiz() {
+  clearError();
+  const q = await KV.get('quiz:' + todayKey());
+  if (!q) return showError("No quiz posted today. Tell your brother to get on it.");
+  currentQuiz = q;
+  quizAnswers = {};
+
+  // Check if already played
+  const played = await KV.get('played:' + todayKey() + ':' + currentUser.username.toLowerCase());
+  if (played) {
+    quizAnswers = played.answers || {};
+    renderQuizResults(played.score);
+  } else {
+    renderQuizForm();
+  }
+  showScreen('quiz');
+}
+
+function renderQuizForm() {
+  document.getElementById('quiz-prize').textContent = currentQuiz.prize;
+  document.getElementById('quiz-results').classList.add('hidden');
+  document.getElementById('quiz-submit-area').classList.remove('hidden');
+
+  const container = document.getElementById('quiz-questions');
+  container.innerHTML = '';
+  const total = currentQuiz.questions.length;
+  document.getElementById('quiz-submit-hint').textContent = `Answer all ${total} questions to submit.`;
+  document.getElementById('quiz-submit-btn').disabled = true;
+
+  currentQuiz.questions.forEach((q, qi) => {
+    const block = document.createElement('div');
+    block.className = 'q-block';
+    block.style.animation = `slideUp ${0.2 + qi * 0.1}s ease`;
+
+    let optionsHtml = '';
+    const letters = ['A','B','C','D'];
+    q.options.forEach((opt, oi) => {
+      optionsHtml += `
+        <div class="option-row" data-qi="${qi}" data-oi="${oi}" onclick="selectAnswer(${qi},${oi})">
+          <div class="option-radio"><div class="option-radio-dot"></div></div>
+          <span style="font-size:14px;color:var(--ink-light)">
+            <span class="mono" style="font-size:10px;color:var(--ink-ghost);margin-right:6px">${letters[oi]}</span>${esc(opt)}
+          </span>
+        </div>`;
+    });
+
+    block.innerHTML = `
+      <div style="display:flex;gap:8px;align-items:flex-start;margin-bottom:12px">
+        <span class="q-num">${qi + 1}.</span>
+        <p class="txt" style="font-size:15px">${esc(q.question)}</p>
+      </div>
+      <div class="flex-col gap-6" style="padding-left:28px">${optionsHtml}</div>`;
+    container.appendChild(block);
+  });
+}
+
+function selectAnswer(qi, oi) {
+  quizAnswers[qi] = oi;
+  // Update UI
+  document.querySelectorAll(`.option-row[data-qi="${qi}"]`).forEach(el => {
+    el.classList.toggle('selected', parseInt(el.dataset.oi) === oi);
+  });
+  // Check if all answered
+  const total = currentQuiz.questions.length;
+  const answered = Object.keys(quizAnswers).length;
+  document.getElementById('quiz-submit-btn').disabled = answered < total;
+  document.getElementById('quiz-submit-hint').textContent = answered < total ? `Answer all ${total} questions to submit.` : '';
+}
+
+async function handleSubmitQuiz() {
+  if (!currentQuiz) return;
+  let correct = 0;
+  currentQuiz.questions.forEach((q, i) => { if (quizAnswers[i] === q.correct) correct++; });
+
+  const result = {
+    username: currentUser.username, score: correct, total: currentQuiz.questions.length,
+    date: todayKey(), timestamp: Date.now(), answers: quizAnswers
+  };
+  await KV.set('played:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
+  await KV.set('lb:' + todayKey() + ':' + currentUser.username.toLowerCase(), result);
+  renderQuizResults(correct);
+}
+
+function renderQuizResults(score) {
+  document.getElementById('quiz-prize').textContent = currentQuiz.prize;
+  document.getElementById('quiz-submit-area').classList.add('hidden');
+  document.getElementById('quiz-questions').innerHTML = '';
+
+  const total = currentQuiz.questions.length;
+  const msg = score === total ? "Perfect score. You absolute legend." :
+    score >= total * 0.7 ? "Not bad at all." :
+    score >= total * 0.4 ? "Could be worse, honestly." :
+    "Rough day. Happens to the best of us.";
+
+  let reviewHtml = '';
+  currentQuiz.questions.forEach((q, qi) => {
+    const isCorrect = quizAnswers[qi] === q.correct;
+    reviewHtml += `
+      <div style="margin-bottom:18px">
+        <div style="display:flex;gap:8px;align-items:flex-start">
+          <span class="q-num" style="margin-top:3px">${qi + 1}.</span>
+          <div>
+            <p class="txt" style="font-size:14px">${esc(q.question)}</p>
+            <p style="font-size:13px" class="${isCorrect ? 'txt-correct' : 'txt-wrong'}">
+              ${isCorrect ? '✓' : '✗'} ${esc(q.options[quizAnswers[qi]] || 'Skipped')}
+              ${!isCorrect ? `<span class="txt-correct" style="margin-left:8px">→ ${esc(q.options[q.correct])}</span>` : ''}
+            </p>
+          </div>
+        </div>
+      </div>`;
+  });
+
+  const resultsEl = document.getElementById('quiz-results');
+  resultsEl.classList.remove('hidden');
+  resultsEl.innerHTML = `
+    <div class="txt-center mb-24">
+      <div style="font-size:48px;font-weight:700;line-height:1">${score}/${total}</div>
+      <p class="txt-sm txt-light txt-italic mt-8">${msg}</p>
+      ${score === total ? '<div class="mt-16"><button class="btn btn-primary" onclick="enterTournament()">✊ Enter Tiebreaker Tournament</button></div>' : ''}
+    </div>
+    <div class="sep"></div>
+    ${reviewHtml}
+    <div class="sep"></div>
+    <div class="txt-center"><button class="btn" onclick="showLeaderboard()">View Leaderboard</button></div>`;
+}
+
+// ══════════════════════════════════════════════
+// Leaderboard
+// ══════════════════════════════════════════════
+async function showLeaderboard() {
+  const entries = await KV.list('lb:' + todayKey() + ':');
+  entries.sort((a, b) => (b.value.score - a.value.score) || (a.value.timestamp - b.value.timestamp));
+
+  document.getElementById('lb-date').textContent = todayKey();
+  const listEl = document.getElementById('lb-list');
+
+  if (entries.length === 0) {
+    listEl.innerHTML = '<p class="txt txt-faint txt-italic txt-center" style="margin-top:32px">No one has played yet today.</p>';
+  } else {
+    const ranks = ['1st','2nd','3rd'];
+    listEl.innerHTML = `
+      <div style="display:flex;justify-content:space-between;padding:0 4px 8px;border-bottom:1px solid var(--border)">
+        <span class="label">Rank & Player</span><span class="label">Score</span>
+      </div>` +
+      entries.map((e, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 4px;border-bottom:1px solid var(--border-light);animation:slideUp ${0.15+i*0.06}s ease">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="mono" style="font-size:11px;width:24px;${i<3?'font-weight:600;color:var(--ink)':'color:var(--ink-ghost)'}">${ranks[i]||i+1}</span>
+            <span style="font-size:14px;${i===0?'font-weight:600':'color:var(--ink-light)'}">${esc(e.value.username)}</span>
+          </div>
+          <span class="mono" style="font-size:13px;font-weight:500">${e.value.score}/${e.value.total}</span>
+        </div>`).join('');
+  }
+  showScreen('leaderboard');
+}
+
+// ══════════════════════════════════════════════
+// RPS Tournament
+// ══════════════════════════════════════════════
+function buildBracket(players) {
+  const shuffled = [...players].sort(() => Math.random() - 0.5);
+  let size = 1;
+  while (size < shuffled.length) size *= 2;
+  const seeded = [...shuffled];
+  while (seeded.length < size) seeded.push('BYE');
+
+  const rounds = [];
+  let current = seeded;
+  let roundNum = 0;
+  while (current.length > 1) {
+    const matchups = [];
+    for (let i = 0; i < current.length; i += 2) {
+      matchups.push({ id: `r${roundNum}-m${i/2}`, p1: current[i], p2: current[i+1], winner: null, throws: [], resolved: false });
+    }
+    rounds.push(matchups);
+    current = matchups.map(() => null);
+    roundNum++;
+  }
+  return rounds;
+}
+
+function resolveThrow(t1, t2) {
+  if (t1 === t2) return 'draw';
+  return RPS_BEATS[t1] === t2 ? 'p1' : 'p2';
+}
+
+function findMyMatchup(t) {
+  if (!t || !currentUser) return null;
+  const uname = currentUser.username.toLowerCase();
+  for (let ri = 0; ri < t.rounds.length; ri++) {
+    for (const m of t.rounds[ri]) {
+      if (!m.resolved && (m.p1?.toLowerCase() === uname || m.p2?.toLowerCase() === uname)) {
+        return { ...m, roundIndex: ri };
+      }
+    }
+  }
+  return null;
+}
+
+async function enterTournament() {
+  clearError();
+  if (!currentUser) return showError('Sign in first.');
+
+  let t = await KV.get('rps:' + todayKey());
+
+  if (!t) {
+    // Get perfect scorers
+    const quiz = await KV.get('quiz:' + todayKey());
+    if (!quiz) return showError('No quiz today, no tournament.');
+    const totalQ = quiz.questions.length;
+    const entries = await KV.list('lb:' + todayKey() + ':');
+    const perfect = entries.filter(e => e.value.score === totalQ).map(e => e.value.username);
+
+    if (perfect.length < 2) return showError("Need at least 2 perfect scorers for a tournament. You win by default!");
+
+    const rounds = buildBracket(perfect);
+    // Auto-resolve BYEs
+    for (const m of rounds[0]) {
+      if (m.p2 === 'BYE') { m.winner = m.p1; m.resolved = true; }
+      else if (m.p1 === 'BYE') { m.winner = m.p2; m.resolved = true; }
+    }
+    if (rounds.length > 1) {
+      for (let mi = 0; mi < rounds[0].length; mi++) {
+        if (rounds[0][mi].resolved) {
+          const nextMi = Math.floor(mi / 2);
+          const slot = mi % 2 === 0 ? 'p1' : 'p2';
+          if (rounds[1][nextMi]) rounds[1][nextMi][slot] = rounds[0][mi].winner;
+        }
+      }
+    }
+    t = { rounds, players: perfect, date: todayKey(), champion: null };
+    await KV.set('rps:' + todayKey(), t);
+  }
+
+  currentTournament = t;
+  myCurrentMatchup = findMyMatchup(t);
+  renderTournament();
+  showScreen('tournament');
+}
+
+async function refreshTournament() {
+  const t = await KV.get('rps:' + todayKey());
+  if (t) {
+    currentTournament = t;
+    myCurrentMatchup = findMyMatchup(t);
+    renderTournament();
+  }
+}
+
+function renderTournament() {
+  const t = currentTournament;
+  if (!t) return;
+
+  // Champion
+  const champEl = document.getElementById('tournament-champion');
+  if (t.champion) {
+    const isMe = t.champion.toLowerCase() === currentUser?.username?.toLowerCase();
+    champEl.classList.remove('hidden');
+    champEl.innerHTML = `
+      <div class="champion-box" style="animation:slideUp 0.4s ease">
+        <div style="font-size:36px;animation:crownBounce 1.5s ease-in-out infinite;margin-bottom:8px">👑</div>
+        <div class="label mb-6">Champion</div>
+        <div style="font-size:28px;font-weight:700">${esc(t.champion)}</div>
+        <p class="txt-sm txt-faint txt-italic mt-8">${isMe ? "That's you. Incredible." : "Better luck next time."}</p>
+      </div>`;
+  } else {
+    champEl.classList.add('hidden');
+  }
+
+  // Bracket
+  const bracketEl = document.getElementById('tournament-bracket');
+  let html = '<div class="label mb-12">Tournament Bracket</div>';
+  t.rounds.forEach((round, ri) => {
+    const roundLabel = ri === t.rounds.length - 1 ? 'FINAL' : ri === t.rounds.length - 2 ? 'SEMIFINAL' : `ROUND ${ri + 1}`;
+    html += `<div class="mb-20" style="animation:slideUp ${0.2+ri*0.1}s ease"><div class="label mb-8">${roundLabel}</div>`;
+    round.forEach(m => {
+      const isMine = myCurrentMatchup?.id === m.id;
+      const throwDots = m.throws.map(th => {
+        const label = th.result === 'p1' ? 'P1' : th.result === 'p2' ? 'P2' : '—';
+        return `<span class="mono" style="font-size:10px;color:var(--ink-faint);padding:2px 4px;border:1px solid var(--border-light);border-radius:2px">${label}</span>`;
+      }).join(' ');
+
+      const status = m.resolved ? '<span class="txt-xs txt-correct">DONE</span>' :
+        (m.p1 && m.p2 && m.p1 !== 'BYE' && m.p2 !== 'BYE') ? '<span class="txt-xs txt-faint txt-italic">in play</span>' : '';
+
+      html += `
+        <div class="match-card ${isMine ? 'mine' : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="flex:1">
+              <div style="font-size:14px;${m.winner === m.p1 ? 'font-weight:700' : ''}${(!m.p1 || m.p1==='BYE' || (m.winner && m.winner !== m.p1)) ? ';color:var(--ink-ghost)' : ''}">${esc(m.p1 || 'TBD')} ${m.winner === m.p1 ? '✓' : ''}</div>
+              <div class="txt-xs txt-faint" style="margin:2px 0">vs</div>
+              <div style="font-size:14px;${m.winner === m.p2 ? 'font-weight:700' : ''}${(!m.p2 || m.p2==='BYE' || (m.winner && m.winner !== m.p2)) ? ';color:var(--ink-ghost)' : ''}">${esc(m.p2 || 'TBD')} ${m.winner === m.p2 ? '✓' : ''}</div>
+            </div>
+            <div style="text-align:right;min-width:60px">
+              ${throwDots ? `<div style="display:flex;gap:4px;justify-content:flex-end;flex-wrap:wrap">${throwDots}</div>` : ''}
+              <div class="mt-4">${status}</div>
+            </div>
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  bracketEl.innerHTML = html;
+
+  // Play area
+  const playEl = document.getElementById('tournament-play-area');
+  if (t.champion) {
+    playEl.innerHTML = '';
+    return;
+  }
+
+  if (!myCurrentMatchup) {
+    playEl.innerHTML = `
+      <div class="txt-center" style="padding:20px 0">
+        <p class="txt-sm txt-faint txt-italic">You don't have an active matchup right now. Either you've been eliminated, or your next opponent hasn't been decided yet.</p>
+        <button class="btn btn-ghost mt-16" style="font-size:12px" onclick="refreshTournament()">Check Again</button>
+      </div>`;
+    return;
+  }
+
+  const m = myCurrentMatchup;
+  const throwHistory = m.throws.map(th => {
+    if (!th.p1 || !th.p2) return '<span class="mono" style="font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:2px">···</span>';
+    const sym = th.result === 'draw' ? '=' : th.result === 'p1' ? '>' : '<';
+    return `<span class="mono" style="font-size:12px;padding:6px 12px;border:1px solid var(--border);border-radius:2px">${RPS_ICONS[th.p1]} ${sym} ${RPS_ICONS[th.p2]}</span>`;
+  }).join(' ');
+
+  playEl.innerHTML = `
+    <div class="label mb-8">Your Matchup</div>
+    <div style="border:2px solid var(--ink);border-radius:2px;padding:20px 16px;text-align:center">
+      <div class="flex-center gap-16 mb-16">
+        <span style="font-size:18px;font-weight:700">${esc(m.p1)}</span>
+        <span class="txt-sm txt-faint">vs</span>
+        <span style="font-size:18px;font-weight:700">${esc(m.p2)}</span>
+      </div>
+      ${throwHistory ? `<div class="mb-16"><div class="label mb-6">Rounds played</div><div class="flex-center gap-8">${throwHistory}</div></div>` : ''}
+      <div id="rps-action-area">
+        <p class="txt-sm txt-faint mb-12">Choose your weapon:</p>
+        <div class="flex-center gap-12">
+          <button class="rps-btn" onclick="submitThrow('rock')">✊<span class="mono" style="font-size:9px;color:var(--ink-faint)">ROCK</span></button>
+          <button class="rps-btn" onclick="submitThrow('paper')">✋<span class="mono" style="font-size:9px;color:var(--ink-faint)">PAPER</span></button>
+          <button class="rps-btn" onclick="submitThrow('scissors')">✌️<span class="mono" style="font-size:9px;color:var(--ink-faint)">SCISSORS</span></button>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function submitThrow(choice) {
+  if (!currentTournament || !myCurrentMatchup) return;
+
+  // Show waiting state
+  document.getElementById('rps-action-area').innerHTML = `
+    <p class="txt-sm txt-faint txt-italic">You threw ${RPS_ICONS[choice]} — waiting for opponent...</p>
+    <div class="mono txt-xs txt-ghost mt-8" style="animation:pulse 1.5s ease-in-out infinite">POLLING ···</div>`;
+
+  const t = JSON.parse(JSON.stringify(currentTournament));
+  const round = t.rounds[myCurrentMatchup.roundIndex];
+  const match = round.find(m => m.id === myCurrentMatchup.id);
+  if (!match) return;
+
+  const uname = currentUser.username.toLowerCase();
+  const isP1 = match.p1?.toLowerCase() === uname;
+  const ci = match.throws.length;
+  if (!match.throws[ci]) match.throws[ci] = {};
+  match.throws[ci][isP1 ? 'p1' : 'p2'] = choice;
+
+  await KV.set('rps:' + todayKey(), t);
+  currentTournament = t;
+
+  // Check immediately
+  const fresh = await KV.get('rps:' + todayKey());
+  if (fresh) {
+    const fm = fresh.rounds[myCurrentMatchup.roundIndex].find(m => m.id === myCurrentMatchup.id);
+    const ft = fm?.throws[fm.throws.length - 1];
+    if (ft?.p1 && ft?.p2 && !ft.result) {
+      await resolveRound(fresh, fm, myCurrentMatchup.roundIndex);
+      return;
+    }
+    currentTournament = fresh;
+  }
+
+  // Start polling
+  pollInterval = setInterval(async () => {
+    const t2 = await KV.get('rps:' + todayKey());
+    if (!t2) return;
+    const m2 = t2.rounds[myCurrentMatchup.roundIndex]?.find(m => m.id === myCurrentMatchup.id);
+    if (!m2) return;
+    const ct = m2.throws[m2.throws.length - 1];
+    if (ct?.p1 && ct?.p2 && !ct.result) {
+      clearInterval(pollInterval); pollInterval = null;
+      await resolveRound(t2, m2, myCurrentMatchup.roundIndex);
+    }
+  }, 2000);
+}
+
+async function resolveRound(t, match, roundIndex) {
+  const actionEl = document.getElementById('rps-action-area');
+
+  // Shake animation
+  actionEl.innerHTML = `
+    <div style="padding:24px 0">
+      <div style="font-size:48px;animation:shake 0.6s ease-in-out infinite">✊</div>
+      <p class="txt-sm txt-faint txt-italic mt-8">Revealing...</p>
+    </div>`;
+
+  await new Promise(r => setTimeout(r, 1200));
+
+  const ct = match.throws[match.throws.length - 1];
+  ct.result = resolveThrow(ct.p1, ct.p2);
+
+  let p1w = 0, p2w = 0;
+  for (const th of match.throws) {
+    if (th.result === 'p1') p1w++;
+    else if (th.result === 'p2') p2w++;
+  }
+
+  if (p1w >= 2 || p2w >= 2) {
+    match.winner = p1w >= 2 ? match.p1 : match.p2;
+    match.resolved = true;
+    if (roundIndex + 1 < t.rounds.length) {
+      const mIndex = t.rounds[roundIndex].indexOf(match);
+      const nextMi = Math.floor(mIndex / 2);
+      const slot = mIndex % 2 === 0 ? 'p1' : 'p2';
+      if (t.rounds[roundIndex + 1][nextMi]) t.rounds[roundIndex + 1][nextMi][slot] = match.winner;
+    }
+    const finalRound = t.rounds[t.rounds.length - 1];
+    if (finalRound.length === 1 && finalRound[0].resolved) t.champion = finalRound[0].winner;
+  }
+
+  await KV.set('rps:' + todayKey(), t);
+  currentTournament = t;
+
+  // Show result
+  const uname = currentUser.username.toLowerCase();
+  const isP1 = match.p1?.toLowerCase() === uname;
+  const yours = isP1 ? ct.p1 : ct.p2;
+  const theirs = isP1 ? ct.p2 : ct.p1;
+  const outcome = ct.result === 'draw' ? 'draw' : ((ct.result === 'p1' && isP1) || (ct.result === 'p2' && !isP1)) ? 'win' : 'lose';
+
+  const outcomeColor = outcome === 'win' ? 'var(--correct)' : outcome === 'lose' ? 'var(--wrong)' : 'var(--ink-faint)';
+  const outcomeText = outcome === 'win' ? 'You win this round!' : outcome === 'lose' ? 'You lose this round.' : 'Draw!';
+
+  let matchResult = '';
+  if (match.winner) {
+    const wonColor = match.winner.toLowerCase() === uname ? 'var(--correct)' : 'var(--wrong)';
+    matchResult = `<p style="font-size:14px;text-align:center;margin-top:8px;color:${wonColor}">Match goes to: ${esc(match.winner)}</p>`;
+  }
+
+  actionEl.innerHTML = `
+    <div style="padding:16px 0;animation:reveal 0.4s ease">
+      <div class="flex-center gap-20" style="font-size:42px;margin-bottom:12px">
+        <span>${RPS_ICONS[yours]}</span>
+        <span style="font-size:20px;color:var(--ink-faint)">vs</span>
+        <span>${RPS_ICONS[theirs]}</span>
+      </div>
+      <p style="font-size:18px;font-weight:700;text-align:center;color:${outcomeColor}">${outcomeText}</p>
+      ${matchResult}
+    </div>`;
+
+  // After delay, refresh
+  setTimeout(() => {
+    myCurrentMatchup = findMyMatchup(currentTournament);
+    renderTournament();
+  }, match.resolved ? 3000 : 2500);
+}
+
+// ══════════════════════════════════════════════
+// Admin
+// ══════════════════════════════════════════════
+function handleAdminLogin() {
+  clearError();
+  if (document.getElementById('admin-pw').value === ADMIN_PASSWORD) {
+    document.getElementById('admin-login-area').classList.add('hidden');
+    document.getElementById('admin-panel').classList.remove('hidden');
+    document.getElementById('admin-date').textContent = todayKey();
+    adminQuestions = [{ question: '', options: ['','','',''], correct: 0 }];
+    renderAdminQuestions();
+  } else {
+    showError('Wrong password.');
+  }
+}
+
+function renderAdminQuestions() {
+  const container = document.getElementById('admin-questions');
+  const letters = ['A','B','C','D'];
+  container.innerHTML = '';
+
+  adminQuestions.forEach((q, qi) => {
+    const card = document.createElement('div');
+    card.className = 'admin-q-card';
+
+    let optionsHtml = '';
+    q.options.forEach((opt, oi) => {
+      optionsHtml += `
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="admin-radio ${q.correct === oi ? 'active' : ''}" onclick="setCorrectAnswer(${qi},${oi})">
+            <div class="admin-radio-dot"></div>
+          </div>
+          <span class="mono" style="font-size:10px;color:var(--ink-ghost);flex-shrink:0">${letters[oi]}</span>
+          <input class="input" value="${esc(opt)}" placeholder="Option ${letters[oi]}" oninput="updateAdminOption(${qi},${oi},this.value)">
+        </div>`;
+    });
+
+    card.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="label">Question ${qi + 1}</div>
+        ${adminQuestions.length > 1 ? `<span class="mono" style="font-size:10px;color:var(--wrong);cursor:pointer" onclick="removeAdminQuestion(${qi})">Remove</span>` : ''}
+      </div>
+      <input class="input" value="${esc(q.question)}" placeholder="Type your question..." oninput="updateAdminQuestion(${qi},this.value)">
+      <div class="flex-col gap-8 mt-12">${optionsHtml}</div>
+      <p class="txt-xs txt-ghost mt-8">Select the circle next to the correct answer.</p>`;
+    container.appendChild(card);
+  });
+}
+
+function updateAdminQuestion(qi, val) { adminQuestions[qi].question = val; }
+function updateAdminOption(qi, oi, val) { adminQuestions[qi].options[oi] = val; }
+function setCorrectAnswer(qi, oi) { adminQuestions[qi].correct = oi; renderAdminQuestions(); }
+function removeAdminQuestion(qi) { adminQuestions.splice(qi, 1); renderAdminQuestions(); }
+function addAdminQuestion() { adminQuestions.push({ question: '', options: ['','','',''], correct: 0 }); renderAdminQuestions(); }
+
+async function handleSaveQuiz() {
+  clearError();
+  const valid = adminQuestions.every(q => q.question.trim() && q.options.every(o => o.trim()));
+  if (!valid) return showError('Fill in all questions and options.');
+  const prize = document.getElementById('admin-prize').value.trim();
+  if (!prize) return showError('Add a prize.');
+
+  await KV.set('quiz:' + todayKey(), { questions: adminQuestions, prize, createdAt: Date.now(), date: todayKey() });
+  await KV.del('rps:' + todayKey());
+  alert('Quiz saved.');
+  showScreen('home');
+  // Reset admin state
+  document.getElementById('admin-login-area').classList.remove('hidden');
+  document.getElementById('admin-panel').classList.add('hidden');
+  document.getElementById('admin-pw').value = '';
+}
+
+async function adminResetTournament() {
+  await KV.del('rps:' + todayKey());
+  currentTournament = null;
+  myCurrentMatchup = null;
+  await enterTournament();
+}
+
+// ══════════════════════════════════════════════
+// Util
+// ══════════════════════════════════════════════
+function esc(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ══════════════════════════════════════════════
+// Boot
+// ══════════════════════════════════════════════
+init();
+</script>
+
+</body>
+</html>
