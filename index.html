@@ -757,6 +757,10 @@ async function refreshTournament() {
     currentTournament = t;
     myCurrentMatchup = findMyMatchup(t);
     renderTournament();
+  } else {
+    // Tournament was reset by admin
+    currentTournament = null; myCurrentMatchup = null;
+    showScreen('home');
   }
 }
 
@@ -895,7 +899,13 @@ async function submitThrow(choice) {
   // Start polling
   pollInterval = setInterval(async () => {
     const t2 = await KV.get('rps:' + todayKey());
-    if (!t2) return;
+    if (!t2) {
+      // Tournament was reset by admin — stop polling and go home
+      clearInterval(pollInterval); pollInterval = null;
+      currentTournament = null; myCurrentMatchup = null;
+      showScreen('home');
+      return;
+    }
     const m2 = t2.rounds[myCurrentMatchup.roundIndex]?.find(m => m.id === myCurrentMatchup.id);
     if (!m2) return;
     const ct = m2.throws[m2.throws.length - 1];
